@@ -10,13 +10,53 @@ use ggez::{Context, ContextBuilder, GameResult};
 mod snake;
 use snake::Snake;
 
+#[derive(PartialEq, Eq)]
+enum Direction {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+impl Direction {
+    fn velocity(&self) -> Vector2<i32> {
+        match self {
+            Direction::Up => Vector2 { x: 0, y: -1 },
+            Direction::Down => Vector2 { x: 0, y: 1 },
+            Direction::Left => Vector2 { x: -1, y: 0 },
+            Direction::Right => Vector2 { x: 1, y: 0 },
+        }
+    }
+
+    fn orthogonal(&self, other: &Direction) -> bool {
+        match self {
+            Direction::Up | Direction::Down => {
+                other == &Direction::Left || other == &Direction::Right
+            }
+            Direction::Left | Direction::Right => {
+                other == &Direction::Up || other == &Direction::Down
+            }
+        }
+    }
+
+    fn from(key_code: event::KeyCode) -> Option<Self> {
+        match key_code {
+            event::KeyCode::Up => Some(Direction::Up),
+            event::KeyCode::Down => Some(Direction::Down),
+            event::KeyCode::Left => Some(Direction::Left),
+            event::KeyCode::Right => Some(Direction::Right),
+            _ => None,
+        }
+    }
+}
+
 struct Game {
     grid: (i32, i32),
     cell: (i32, i32),
     update_interval: u16,
     last_update: u128,
     snake: Snake,
-    velocity: Vector2<i32>,
+    direction: Direction,
 }
 
 impl Game {
@@ -35,7 +75,7 @@ impl Game {
                 mesh: snake_mesh,
                 position: Point2 { x: 0, y: 0 },
             },
-            velocity: Vector2 { x: 1, y: 0 },
+            direction: Direction::Right,
             cell: cell,
             grid: grid,
             update_interval: 1000,
@@ -49,9 +89,10 @@ impl EventHandler for Game {
         let current_time = ggez::timer::time_since_start(ctx).as_millis();
         let delta = (current_time - self.last_update) as u16;
         if delta >= self.update_interval {
+            let velocity = self.direction.velocity();
             let new_position = Point2 {
-                x: self.snake.position.x + self.velocity.x,
-                y: self.snake.position.y + self.velocity.y,
+                x: self.snake.position.x + velocity.x,
+                y: self.snake.position.y + velocity.y,
             };
             self.snake.update(new_position)?;
 
@@ -78,14 +119,15 @@ impl EventHandler for Game {
         if keycode == event::KeyCode::Escape {
             event::quit(ctx);
         }
-
-        self.velocity = match keycode {
-            event::KeyCode::Up => Vector2 { x: 0, y: -1},
-            event::KeyCode::Down => Vector2 { x: 0, y: 1},
-            event::KeyCode::Left => Vector2 { x: -1, y: 0},
-            event::KeyCode::Right => Vector2 { x: 1, y: 0},
-            _ => self.velocity
-        };
+        // update the direction
+        match Direction::from(keycode) {
+            Some(direction) => {
+                if self.direction.orthogonal(&direction) {
+                    self.direction = direction
+                }
+            }
+            _ => (),
+        }
     }
 }
 
