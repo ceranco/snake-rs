@@ -7,6 +7,8 @@ use ggez::input;
 use ggez::mint::Point2;
 use ggez::{Context, ContextBuilder, GameResult};
 
+use rand::{self, Rng};
+
 mod primitives;
 use primitives::*;
 
@@ -16,12 +18,17 @@ struct Game {
     update_interval: u16,
     last_update: u128,
     snake: Snake,
+    food: Food,
 }
 
 impl Game {
     fn new(ctx: &mut Context) -> GameResult<Self> {
-        let cell = (64, 64);
-        let grid = (32, 32);
+        let window_size = ggez::graphics::screen_coordinates(ctx);
+        let cell = (32, 32);
+        let grid = (
+            (window_size.w / cell.0 as f32) as i32,
+            (window_size.h / cell.1 as f32) as i32,
+        );
 
         let snake_mesh = Mesh::new_rectangle(
             ctx,
@@ -29,11 +36,25 @@ impl Game {
             Rect::new(0.0, 0.0, cell.0 as f32, cell.1 as f32),
             graphics::WHITE,
         )?;
+        let food_mesh = Mesh::new_rectangle(
+            ctx,
+            DrawMode::fill(),
+            Rect::new(0.0, 0.0, cell.0 as f32, cell.1 as f32),
+            graphics::Color::from_rgb(200, 100, 0),
+        )?;
+
         Ok(Self {
             snake: Snake::new(snake_mesh, Point2 { x: 0, y: 0 }, Direction::Right),
+            food: Food::new(
+                food_mesh,
+                Point2 {
+                    x: rand::thread_rng().gen_range(0, grid.0),
+                    y: rand::thread_rng().gen_range(0, grid.1),
+                },
+            ),
             cell: cell,
             grid: grid,
-            update_interval: 1000,
+            update_interval: 100,
             last_update: 0,
         })
     }
@@ -44,7 +65,23 @@ impl EventHandler for Game {
         let current_time = ggez::timer::time_since_start(ctx).as_millis();
         let delta = (current_time - self.last_update) as u16;
         if delta >= self.update_interval {
-            self.snake.update();
+            let position = self.snake.position();
+            let velocity = self.snake.direction().velocity();
+
+            let next_position = Point2 {
+                x: position.x + velocity.x,
+                y: position.y + velocity.y,
+            };
+            let food_position = self.food.position();
+
+            let grow = next_position == food_position;
+            self.snake.update(grow);
+            if grow {
+                self.food.set_position(Point2 {
+                    x: rand::thread_rng().gen_range(0, self.grid.0),
+                    y: rand::thread_rng().gen_range(0, self.grid.1),
+                })
+            }
             self.last_update = current_time;
         }
 
@@ -52,8 +89,9 @@ impl EventHandler for Game {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        graphics::clear(ctx, Color::from_rgb(0, 30, 120));
+        graphics::clear(ctx, Color::from_rgb(40, 50, 120));
         self.snake.draw(ctx, self.cell)?;
+        self.food.draw(ctx, self.cell)?;
         graphics::present(ctx)?;
         Ok(())
     }

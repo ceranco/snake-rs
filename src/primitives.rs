@@ -76,7 +76,15 @@ impl Snake {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn direction(&self) -> Direction {
+        self.direction
+    }
+
+    pub fn position(&self) -> Point2<i32> {
+        *self.points.last().expect("Snake must not be empty")
+    }
+
+    pub fn update(&mut self, grow: bool) {
         let velocity = self.direction.velocity();
 
         let head_point = *self.points.last().expect("Snake must not be empty");
@@ -84,7 +92,9 @@ impl Snake {
             x: head_point.x + velocity.x,
             y: head_point.y + velocity.y,
         });
-        self.points.remove(0);
+        if !grow {
+            self.points.remove(0);
+        }
     }
 
     pub fn draw(&mut self, ctx: &mut Context, cell_size: (i32, i32)) -> GameResult {
@@ -98,6 +108,40 @@ impl Snake {
                 },),
             )?;
         }
+        Ok(())
+    }
+}
+
+pub struct Food {
+    mesh: Mesh,
+    position: Point2<i32>,
+}
+
+impl Food {
+    pub fn new(mesh: Mesh, position: Point2<i32>) -> Self {
+        Self {
+            mesh: mesh,
+            position: position,
+        }
+    }
+
+    pub fn set_position(&mut self, position: Point2<i32>) {
+        self.position = position;
+    }
+
+    pub fn position(&self) -> Point2<i32> {
+        self.position
+    }
+
+    pub fn draw(&mut self, ctx: &mut Context, cell_size: (i32, i32)) -> GameResult {
+        graphics::draw(
+            ctx,
+            &mut self.mesh,
+            (Point2 {
+                x: (self.position.x * cell_size.0) as f32,
+                y: (self.position.y * cell_size.1) as f32,
+            },),
+        )?;
         Ok(())
     }
 }
