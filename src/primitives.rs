@@ -79,7 +79,7 @@ impl Snake {
     pub fn update(&mut self) {
         let velocity = self.direction.velocity();
 
-        let head_point = self.points.last().expect("Snake must not be empty").clone();
+        let head_point = *self.points.last().expect("Snake must not be empty");
         self.points.push(Point2 {
             x: head_point.x + velocity.x,
             y: head_point.y + velocity.y,
