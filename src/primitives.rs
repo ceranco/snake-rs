@@ -53,6 +53,7 @@ impl Direction {
 pub struct Snake {
     mesh: Mesh,
     direction: Direction,
+    direction_cache: Direction,
     points: Vec<Point2<i32>>,
 }
 
@@ -61,12 +62,13 @@ impl Snake {
         Self {
             mesh: mesh,
             direction: direction,
+            direction_cache: direction,
             points: vec![position],
         }
     }
 
     pub fn set_direction(&mut self, direction: Direction) -> SnakeResult<()> {
-        if self.direction.orthogonal(direction) {
+        if self.direction_cache.orthogonal(direction) {
             self.direction = direction;
             Ok(())
         } else {
@@ -95,6 +97,7 @@ impl Snake {
         if !grow {
             self.points.remove(0);
         }
+        self.direction_cache = self.direction;
     }
 
     pub fn draw(&mut self, ctx: &mut Context, cell_size: (i32, i32)) -> GameResult {
