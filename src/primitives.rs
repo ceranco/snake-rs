@@ -53,7 +53,7 @@ impl Direction {
 pub struct Snake {
     mesh: Mesh,
     direction: Direction,
-    position: Point2<i32>,
+    points: Vec<Point2<i32>>,
 }
 
 impl Snake {
@@ -61,7 +61,7 @@ impl Snake {
         Self {
             mesh: mesh,
             direction: direction,
-            position: position,
+            points: vec![position],
         }
     }
 
@@ -78,18 +78,26 @@ impl Snake {
 
     pub fn update(&mut self) {
         let velocity = self.direction.velocity();
-        self.position = Point2 {
-            x: self.position.x + velocity.x,
-            y: self.position.y + velocity.y,
-        };
+
+        let head_point = self.points.last().expect("Snake must not be empty").clone();
+        self.points.push(Point2 {
+            x: head_point.x + velocity.x,
+            y: head_point.y + velocity.y,
+        });
+        self.points.remove(0);
     }
 
     pub fn draw(&mut self, ctx: &mut Context, cell_size: (i32, i32)) -> GameResult {
-        let point = Point2 {
-            x: (self.position.x * cell_size.0) as f32,
-            y: (self.position.y * cell_size.1) as f32,
-        };
-        graphics::draw(ctx, &mut self.mesh, (point,))?;
+        for point in &self.points {
+            graphics::draw(
+                ctx,
+                &mut self.mesh,
+                (Point2 {
+                    x: (point.x * cell_size.0) as f32,
+                    y: (point.y * cell_size.1) as f32,
+                },),
+            )?;
+        }
         Ok(())
     }
 }
