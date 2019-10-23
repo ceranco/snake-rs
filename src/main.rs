@@ -102,7 +102,7 @@ impl EventHandler for Game {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        graphics::clear(ctx, Color::from_rgb(40, 50, 120));
+        graphics::clear(ctx, Color::from_rgb(40, 50, 130));
         self.snake.draw(ctx, self.cell)?;
         self.food.draw(ctx, self.cell)?;
         graphics::present(ctx)?;
