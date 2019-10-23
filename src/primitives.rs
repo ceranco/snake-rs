@@ -28,14 +28,12 @@ impl Direction {
         }
     }
 
-    pub fn orthogonal(&self, other: Direction) -> bool {
+    pub fn inverse(&self) -> Direction {
         match self {
-            Direction::Up | Direction::Down => {
-                other == Direction::Left || other == Direction::Right
-            }
-            Direction::Left | Direction::Right => {
-                other == Direction::Up || other == Direction::Down
-            }
+            Direction::Up => Direction::Down,
+            Direction::Down => Direction::Up,
+            Direction::Left => Direction::Right,
+            Direction::Right => Direction::Left
         }
     }
 
@@ -68,7 +66,7 @@ impl Snake {
     }
 
     pub fn set_direction(&mut self, direction: Direction) -> SnakeResult<()> {
-        if self.direction_cache.orthogonal(direction) {
+        if direction != self.direction_cache.inverse() {
             self.direction = direction;
             Ok(())
         } else {
