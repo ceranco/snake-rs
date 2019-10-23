@@ -48,8 +48,8 @@ impl Game {
             food: Food::new(
                 food_mesh,
                 Point2 {
-                    x: rand::thread_rng().gen_range(0, grid.0),
-                    y: rand::thread_rng().gen_range(0, grid.1),
+                    x: grid.0 / 2,
+                    y: grid.1 / 2,
                 },
             ),
             cell: cell,
@@ -57,6 +57,22 @@ impl Game {
             update_interval: 100,
             last_update: 0,
         })
+    }
+
+    fn gen_food_position(&self) -> Point2<i32> {
+        let mut new_food_position = Point2 {
+            x: rand::thread_rng().gen_range(0, self.grid.0),
+            y: rand::thread_rng().gen_range(0, self.grid.1),
+        };
+        while self.snake.points().contains(&new_food_position) {
+            println!("Ping");
+            new_food_position = Point2 {
+                x: rand::thread_rng().gen_range(0, self.grid.0),
+                y: rand::thread_rng().gen_range(0, self.grid.1),
+            };
+        }
+
+        new_food_position
     }
 }
 
@@ -77,10 +93,7 @@ impl EventHandler for Game {
             let grow = next_position == food_position;
             self.snake.update(grow);
             if grow {
-                self.food.set_position(Point2 {
-                    x: rand::thread_rng().gen_range(0, self.grid.0),
-                    y: rand::thread_rng().gen_range(0, self.grid.1),
-                })
+                self.food.set_position(self.gen_food_position());
             }
             self.last_update = current_time;
         }

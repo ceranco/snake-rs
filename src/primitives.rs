@@ -86,6 +86,10 @@ impl Snake {
         *self.points.last().expect("Snake must not be empty")
     }
 
+    pub fn points(&self) -> &[Point2<i32>] {
+        &self.points
+    }
+
     pub fn update(&mut self, grow: bool) {
         let velocity = self.direction.velocity();
 
