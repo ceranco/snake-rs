@@ -1,15 +1,49 @@
-use ggez::event;
-use ggez::graphics;
-use ggez::graphics::Mesh;
-use ggez::mint::{Point2, Vector2};
-use ggez::{Context, GameResult};
+use ggez::event::KeyCode;
+use ggez::mint::Point2;
+use rand::{self, Rng};
 
+/// The size of out game board in terms of how many grid
+/// cells it takes up.
+pub const GRID_SIZE: (i16, i16) = (30, 20);
+/// The pixel size of each tile.
+pub const GRID_CELL_SIZE: (i16, i16) = (32, 32);
+
+/// The size of the window.
+pub const SCREEN_SIZE: (f32, f32) = (
+    GRID_SIZE.0 as f32 * GRID_CELL_SIZE.0 as f32,
+    GRID_SIZE.1 as f32 * GRID_CELL_SIZE.1 as f32,
+);
+
+/// The number of updates we want to run each second.
+pub const UPDATES_PER_SECOND: f32 = 8.0;
+/// The number of milliseconds per each update.
+pub const MILLIS_PER_UPDATE: u64 = (1000.0 / UPDATES_PER_SECOND) as u64;
+
+/// This trait provides an "arithmetic" modulo function,
+/// which works well for wrapping negative values.
+pub trait ModuloSigned {
+    fn modulo_signed(&self, n: Self) -> Self;
+}
+
+impl<T> ModuloSigned for T
+where
+    T: std::ops::Add<Output = T> + std::ops::Rem<Output = T> + Clone,
+{
+    fn modulo_signed(&self, n: Self) -> Self {
+        (self.clone() % n.clone() + n.clone()) % n.clone()
+    }
+}
+
+/// Contains all relevent errors
+/// for our game.
 #[derive(Debug, Clone)]
 pub enum SnakeError {
     LogicError(String),
 }
 pub type SnakeResult<T = ()> = Result<T, SnakeError>;
 
+/// Represents all the possible directions
+/// that our snake can move.
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Direction {
     Left,
@@ -19,134 +53,99 @@ pub enum Direction {
 }
 
 impl Direction {
-    pub fn velocity(&self) -> Vector2<i32> {
-        match self {
-            Direction::Up => Vector2 { x: 0, y: -1 },
-            Direction::Down => Vector2 { x: 0, y: 1 },
-            Direction::Left => Vector2 { x: -1, y: 0 },
-            Direction::Right => Vector2 { x: 1, y: 0 },
-        }
-    }
-
+    /// Allows us to easily get the inverse of a `Direction`.
+    ///
+    /// This allows us to easily check if the can move in
+    /// a given direction.
     pub fn inverse(&self) -> Direction {
         match self {
             Direction::Up => Direction::Down,
             Direction::Down => Direction::Up,
             Direction::Left => Direction::Right,
-            Direction::Right => Direction::Left
+            Direction::Right => Direction::Left,
         }
     }
 
-    pub fn from(key_code: event::KeyCode) -> Option<Self> {
-        match key_code {
-            event::KeyCode::Up => Some(Direction::Up),
-            event::KeyCode::Down => Some(Direction::Down),
-            event::KeyCode::Left => Some(Direction::Left),
-            event::KeyCode::Right => Some(Direction::Right),
+    /// Converts between a `ggez` `KeyCode` and the `Direction` it represents.
+    ///
+    /// Not every `KeyCode` represents a `Direction`, so `None` is returned
+    /// if this is the case.
+    pub fn from_keycode(keycode: KeyCode) -> Option<Self> {
+        match keycode {
+            KeyCode::Up => Some(Direction::Up),
+            KeyCode::Down => Some(Direction::Down),
+            KeyCode::Left => Some(Direction::Left),
+            KeyCode::Right => Some(Direction::Right),
             _ => None,
         }
     }
 }
 
-pub struct Snake {
-    mesh: Mesh,
-    direction: Direction,
-    direction_cache: Direction,
-    points: Vec<Point2<i32>>,
+/// Represents the possible things that the
+/// snake could have eaten each update.
+///
+/// It could have either eaten a piece of `Food` or
+/// itself if its head ran into its body.
+#[derive(Clone, Copy)]
+pub enum Ate {
+    Itself,
+    Food,
 }
 
-impl Snake {
-    pub fn new(mesh: Mesh, position: Point2<i32>, direction: Direction) -> Self {
+/// Represents a location on the grid / game board.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct GridPosition {
+    pub x: i16,
+    pub y: i16,
+}
+
+impl GridPosition {
+    pub fn new(x: i16, y: i16) -> Self {
+        Self { x: x, y: y }
+    }
+
+    /// Creates a random `GridPosition` from `(0, 0)` to `(max_x, max_y)`.
+    pub fn random(max_x: i16, max_y: i16) -> Self {
+        let mut rng = rand::thread_rng();
+        (
+            rng.gen_range::<i16, i16, i16>(0, max_x),
+            rng.gen_range::<i16, i16, i16>(0, max_y),
+        )
+            .into()
+    }
+
+    /// Created a `GridPosition` from another position and a `Direction`.
+    pub fn new_from_move(position: GridPosition, direction: Direction) -> Self {
+        match direction {
+            Direction::Up => {
+                GridPosition::new(position.x, (position.y - 1).modulo_signed(GRID_SIZE.1))
+            }
+            Direction::Down => {
+                GridPosition::new(position.x, (position.y + 1).modulo_signed(GRID_SIZE.1))
+            }
+            Direction::Left => {
+                GridPosition::new((position.x - 1).modulo_signed(GRID_SIZE.0), position.y)
+            }
+            Direction::Right => {
+                GridPosition::new((position.x + 1).modulo_signed(GRID_SIZE.0), position.y)
+            }
+        }
+    }
+}
+
+impl From<(i16, i16)> for GridPosition {
+    fn from(pos: (i16, i16)) -> Self {
+        Self { x: pos.0, y: pos.1 }
+    }
+}
+
+/// Helper implementation to eaily convert our `GridPosition`
+/// to screen coordinates.
+impl From<GridPosition> for Point2<f32> {
+    fn from(pos: GridPosition) -> Self {
         Self {
-            mesh: mesh,
-            direction: direction,
-            direction_cache: direction,
-            points: vec![position],
+            x: (pos.x * GRID_CELL_SIZE.0) as f32,
+            y: (pos.y * GRID_CELL_SIZE.1) as f32,
         }
-    }
-
-    pub fn set_direction(&mut self, direction: Direction) -> SnakeResult<()> {
-        if direction != self.direction_cache.inverse() {
-            self.direction = direction;
-            Ok(())
-        } else {
-            Err(SnakeError::LogicError(
-                "Can only update direction if it is orthogonal to previous direction".to_owned(),
-            ))
-        }
-    }
-
-    pub fn direction(&self) -> Direction {
-        self.direction
-    }
-
-    pub fn position(&self) -> Point2<i32> {
-        *self.points.last().expect("Snake must not be empty")
-    }
-
-    pub fn points(&self) -> &[Point2<i32>] {
-        &self.points
-    }
-
-    pub fn update(&mut self, grow: bool) {
-        let velocity = self.direction.velocity();
-
-        let head_point = *self.points.last().expect("Snake must not be empty");
-        self.points.push(Point2 {
-            x: head_point.x + velocity.x,
-            y: head_point.y + velocity.y,
-        });
-        if !grow {
-            self.points.remove(0);
-        }
-        self.direction_cache = self.direction;
-    }
-
-    pub fn draw(&mut self, ctx: &mut Context, cell_size: (i32, i32)) -> GameResult {
-        for point in &self.points {
-            graphics::draw(
-                ctx,
-                &mut self.mesh,
-                (Point2 {
-                    x: (point.x * cell_size.0) as f32,
-                    y: (point.y * cell_size.1) as f32,
-                },),
-            )?;
-        }
-        Ok(())
-    }
-}
-
-pub struct Food {
-    mesh: Mesh,
-    position: Point2<i32>,
-}
-
-impl Food {
-    pub fn new(mesh: Mesh, position: Point2<i32>) -> Self {
-        Self {
-            mesh: mesh,
-            position: position,
-        }
-    }
-
-    pub fn set_position(&mut self, position: Point2<i32>) {
-        self.position = position;
-    }
-
-    pub fn position(&self) -> Point2<i32> {
-        self.position
-    }
-
-    pub fn draw(&mut self, ctx: &mut Context, cell_size: (i32, i32)) -> GameResult {
-        graphics::draw(
-            ctx,
-            &mut self.mesh,
-            (Point2 {
-                x: (self.position.x * cell_size.0) as f32,
-                y: (self.position.y * cell_size.1) as f32,
-            },),
-        )?;
-        Ok(())
     }
 }

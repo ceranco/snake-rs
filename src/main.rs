@@ -1,101 +1,93 @@
-use ggez::conf::WindowSetup;
+use ggez::conf::{WindowMode, WindowSetup};
 use ggez::event;
 use ggez::event::EventHandler;
 use ggez::graphics;
 use ggez::graphics::{Color, DrawMode, Mesh, Rect};
 use ggez::input;
-use ggez::mint::Point2;
 use ggez::{Context, ContextBuilder, GameResult};
 
-use rand::{self, Rng};
+// use rand::{self, Rng};
+use std::time::{Duration, Instant};
 
 mod primitives;
 use primitives::*;
+mod entities;
+use entities::*;
 
 struct Game {
-    grid: (i32, i32),
-    cell: (i32, i32),
-    update_interval: u16,
-    last_update: u128,
+    game_over: bool,
     snake: Snake,
     food: Food,
+    last_update: Instant,
 }
 
 impl Game {
     fn new(ctx: &mut Context) -> GameResult<Self> {
-        let window_size = ggez::graphics::screen_coordinates(ctx);
-        let cell = (32, 32);
-        let grid = (
-            (window_size.w / cell.0 as f32) as i32,
-            (window_size.h / cell.1 as f32) as i32,
-        );
-
-        let snake_mesh = Mesh::new_rectangle(
+        let snake_head_mesh = Mesh::new_rectangle(
             ctx,
             DrawMode::fill(),
-            Rect::new(0.0, 0.0, cell.0 as f32, cell.1 as f32),
+            Rect::new(0.0, 0.0, GRID_CELL_SIZE.0 as f32, GRID_CELL_SIZE.1 as f32),
+            graphics::WHITE,
+        )?;
+        let snake_body_mesh = Mesh::new_rectangle(
+            ctx,
+            DrawMode::fill(),
+            Rect::new(0.0, 0.0, GRID_CELL_SIZE.0 as f32, GRID_CELL_SIZE.1 as f32),
             graphics::WHITE,
         )?;
         let food_mesh = Mesh::new_rectangle(
             ctx,
             DrawMode::fill(),
-            Rect::new(0.0, 0.0, cell.0 as f32, cell.1 as f32),
+            Rect::new(0.0, 0.0, GRID_CELL_SIZE.0 as f32, GRID_CELL_SIZE.1 as f32),
             graphics::Color::from_rgb(200, 100, 0),
         )?;
 
         Ok(Self {
-            snake: Snake::new(snake_mesh, Point2 { x: 0, y: 0 }, Direction::Right),
-            food: Food::new(
-                food_mesh,
-                Point2 {
-                    x: grid.0 / 2,
-                    y: grid.1 / 2,
-                },
-            ),
-            cell: cell,
-            grid: grid,
-            update_interval: 100,
-            last_update: 0,
+            snake: Snake::new(snake_body_mesh, snake_head_mesh, (1, 0).into()),
+            food: Food::new(food_mesh, (GRID_SIZE.0 / 2, GRID_SIZE.1 / 2).into()),
+            game_over: false,
+            last_update: Instant::now(),
         })
     }
 
-    fn gen_food_position(&self) -> Point2<i32> {
-        let mut new_food_position = Point2 {
-            x: rand::thread_rng().gen_range(0, self.grid.0),
-            y: rand::thread_rng().gen_range(0, self.grid.1),
-        };
-        while self.snake.points().contains(&new_food_position) {
-            println!("Ping");
-            new_food_position = Point2 {
-                x: rand::thread_rng().gen_range(0, self.grid.0),
-                y: rand::thread_rng().gen_range(0, self.grid.1),
-            };
-        }
+    // fn gen_food_position(&self) -> Point2<i32> {
+    //     let mut new_food_position = Point2 {
+    //         x: rand::thread_rng().gen_range(0, self.grid.0),
+    //         y: rand::thread_rng().gen_range(0, self.grid.1),
+    //     };
+    //     while self.snake.points().contains(&new_food_position) {
+    //         println!("Ping");
+    //         new_food_position = Point2 {
+    //             x: rand::thread_rng().gen_range(0, self.grid.0),
+    //             y: rand::thread_rng().gen_range(0, self.grid.1),
+    //         };
+    //     }
 
-        new_food_position
-    }
+    //     new_food_position
+    // }
 }
 
 impl EventHandler for Game {
-    fn update(&mut self, ctx: &mut Context) -> GameResult {
-        let current_time = ggez::timer::time_since_start(ctx).as_millis();
-        let delta = (current_time - self.last_update) as u16;
-        if delta >= self.update_interval {
-            let position = self.snake.position();
-            let velocity = self.snake.direction().velocity();
-
-            let next_position = Point2 {
-                x: position.x + velocity.x,
-                y: position.y + velocity.y,
-            };
-            let food_position = self.food.position();
-
-            let grow = next_position == food_position;
-            self.snake.update(grow);
-            if grow {
-                self.food.set_position(self.gen_food_position());
+    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        // we want to update only if the game is not over and enough time
+        // has passed since the last update
+        if !self.game_over
+            && Instant::now() - self.last_update >= Duration::from_millis(MILLIS_PER_UPDATE)
+        {
+            if let Some(ate) = self.snake.update(&self.food) {
+                match ate {
+                    // game over if the snake ate itself
+                    Ate::Itself => self.game_over = true,
+                    // if the snake ate the food, we need to change its position
+                    // note: we need to add a way grill a random position *without*
+                    // a snake segment.
+                    Ate::Food => self
+                        .food
+                        .set_position(GridPosition::random(GRID_SIZE.0, GRID_SIZE.1)),
+                }
             }
-            self.last_update = current_time;
+            // update the last update time
+            self.last_update = Instant::now();
         }
 
         Ok(())
@@ -103,8 +95,8 @@ impl EventHandler for Game {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         graphics::clear(ctx, Color::from_rgb(40, 50, 130));
-        self.snake.draw(ctx, self.cell)?;
-        self.food.draw(ctx, self.cell)?;
+        self.snake.draw(ctx)?;
+        self.food.draw(ctx)?;
         graphics::present(ctx)?;
         Ok(())
     }
@@ -120,13 +112,10 @@ impl EventHandler for Game {
             event::quit(ctx);
         }
         // update the direction
-        match Direction::from(keycode) {
-            Some(direction) => {
-                // this method may fail if the direction is not orthogonal,
-                // but we don't especially care ;)
-                let _ = self.snake.set_direction(direction);
-            }
-            _ => (),
+        if let Some(direction) = Direction::from_keycode(keycode) {
+            // this method may fail if the direction is not orthogonal,
+            // but we don't especially care ;)
+            let _ = self.snake.set_direction(direction);
         }
     }
 }
@@ -134,6 +123,7 @@ impl EventHandler for Game {
 fn main() {
     let (mut ctx, mut events_loop) = ContextBuilder::new("Snake", "Eran Cohen")
         .window_setup(WindowSetup::default().title("Snake"))
+        .window_mode(WindowMode::default().dimensions(SCREEN_SIZE.0, SCREEN_SIZE.1))
         .build()
         .unwrap();
     let mut game = Game::new(&mut ctx).unwrap();
