@@ -1,12 +1,10 @@
-use ggez::conf::{WindowMode, WindowSetup};
-use ggez::event;
-use ggez::event::EventHandler;
-use ggez::graphics;
-use ggez::graphics::{Color, DrawMode, Mesh, Rect};
-use ggez::input;
-use ggez::{Context, ContextBuilder, GameResult};
-
-// use rand::{self, Rng};
+use ggez::{
+    self,
+    conf::{WindowMode, WindowSetup},
+    event::{self, EventHandler},
+    graphics::{self, Color, DrawMode, Mesh, Rect},
+    input, Context, ContextBuilder, GameResult,
+};
 use std::time::{Duration, Instant};
 
 mod primitives;
@@ -14,6 +12,10 @@ use primitives::*;
 mod entities;
 use entities::*;
 
+/// This is the game state struct that will contain
+/// all the needed state (snake, food, game over, ...)
+/// and implement the `EventHandler` trait to listen and respond to
+/// events.
 struct Game {
     game_over: bool,
     snake: Snake,
@@ -22,6 +24,7 @@ struct Game {
 }
 
 impl Game {
+    /// Helper function to create a new `Game`.
     fn new(ctx: &mut Context) -> GameResult<Self> {
         let snake_head_mesh = Mesh::new_rectangle(
             ctx,
@@ -49,22 +52,6 @@ impl Game {
             last_update: Instant::now(),
         })
     }
-
-    // fn gen_food_position(&self) -> Point2<i32> {
-    //     let mut new_food_position = Point2 {
-    //         x: rand::thread_rng().gen_range(0, self.grid.0),
-    //         y: rand::thread_rng().gen_range(0, self.grid.1),
-    //     };
-    //     while self.snake.points().contains(&new_food_position) {
-    //         println!("Ping");
-    //         new_food_position = Point2 {
-    //             x: rand::thread_rng().gen_range(0, self.grid.0),
-    //             y: rand::thread_rng().gen_range(0, self.grid.1),
-    //         };
-    //     }
-
-    //     new_food_position
-    // }
 }
 
 impl EventHandler for Game {
@@ -89,7 +76,6 @@ impl EventHandler for Game {
             // update the last update time
             self.last_update = Instant::now();
         }
-
         Ok(())
     }
 
@@ -121,12 +107,15 @@ impl EventHandler for Game {
 }
 
 fn main() {
+    // create the new context and window with the correct dimensions and title
     let (mut ctx, mut events_loop) = ContextBuilder::new("Snake", "Eran Cohen")
         .window_setup(WindowSetup::default().title("Snake"))
         .window_mode(WindowMode::default().dimensions(SCREEN_SIZE.0, SCREEN_SIZE.1))
         .build()
         .unwrap();
+    // create a new game
     let mut game = Game::new(&mut ctx).unwrap();
 
+    // run the game
     event::run(&mut ctx, &mut events_loop, &mut game).unwrap();
 }
