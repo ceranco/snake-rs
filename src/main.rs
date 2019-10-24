@@ -1,14 +1,11 @@
 use ggez::{
     self,
     conf::{WindowMode, WindowSetup},
-    event::{self, EventHandler, KeyCode},
-    graphics::{
-        self, Color, DrawMode, Mesh, Rect, Scale, Text, TextFragment, DEFAULT_FONT_SCALE,
-    },
-    input,
-    timer,
+    event::{self, Axis, Button, EventHandler, KeyCode},
+    graphics::{self, Color, DrawMode, Mesh, Rect, Scale, Text, TextFragment, DEFAULT_FONT_SCALE},
+    input::{self, gamepad::GamepadId},
     mint::Point2,
-    Context, ContextBuilder, GameResult,
+    timer, Context, ContextBuilder, GameResult,
 };
 use std::time::{Duration, Instant};
 
@@ -144,6 +141,15 @@ impl EventHandler for Game {
             self.food = game.food;
             self.game_over = game.game_over;
             self.last_update = game.last_update;
+        }
+    }
+
+    fn gamepad_button_down_event(&mut self, _ctx: &mut Context, btn: Button, _id: GamepadId) {
+        // update the direction
+        if let Some(direction) = Direction::from_button(btn) {
+            // this method may fail if the direction is not orthogonal,
+            // but we don't especially care ;)
+            let _ = self.snake.set_direction(direction);
         }
     }
 }

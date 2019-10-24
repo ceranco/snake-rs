@@ -1,5 +1,7 @@
-use ggez::event::KeyCode;
-use ggez::mint::Point2;
+use ggez::{
+    event::{KeyCode, Button},
+    mint::Point2
+};
 use rand::{self, Rng};
 
 /// The size of out game board in terms of how many grid
@@ -76,6 +78,20 @@ impl Direction {
             KeyCode::Down => Some(Direction::Down),
             KeyCode::Left => Some(Direction::Left),
             KeyCode::Right => Some(Direction::Right),
+            _ => None,
+        }
+    }
+
+    /// Converts between a `ggez` `Button` and the `Direction` it represents.
+    /// 
+    /// Not every `Button` represents a `Direction`, so `None` is returned
+    /// if this is the case.
+    pub fn from_button(button: Button) -> Option<Self> {
+        match button {
+            Button::DPadUp => Some(Direction::Up),
+            Button::DPadDown => Some(Direction::Down),
+            Button::DPadLeft => Some(Direction::Left),
+            Button::DPadRight => Some(Direction::Right),
             _ => None,
         }
     }
