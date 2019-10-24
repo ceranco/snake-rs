@@ -4,7 +4,7 @@ use ggez::{
     mint::Point2,
     Context, GameResult,
 };
-use std::collections::LinkedList;
+use std::collections::VecDeque;
 
 /// Contains all the information needed to describe
 /// the state of the snake itself.
@@ -12,7 +12,7 @@ pub struct Snake {
     head_mesh: Mesh,
     body_mesh: Mesh,
     head: GridPosition,
-    body: LinkedList<GridPosition>,
+    body: VecDeque<GridPosition>,
     direction: Direction,
     previous_direction: Direction,
     next_direction: Option<Direction>,
@@ -22,7 +22,7 @@ impl Snake {
     /// Creates a new `Snake` with one head segment at the
     /// given position and one `Tail` segment behind it (direction is right).
     pub fn new(head_mesh: Mesh, body_mesh: Mesh, position: GridPosition) -> Self {
-        let mut body = LinkedList::new();
+        let mut body = VecDeque::new();
         body.push_back(GridPosition::new_from_move(position, Direction::Left));
         Self {
             head_mesh: head_mesh,
@@ -52,6 +52,17 @@ impl Snake {
                 "Can only update direction if it is orthogonal to previous direction".to_owned(),
             ))
         }
+    }
+
+    /// Returns a `Vec` of ***all*** of the segments of the
+    /// snake (including the head).
+    ///
+    /// This is useful to generate a new position for the
+    /// food and check that the snake isn't already there.
+    pub fn segments(&self) -> Vec<GridPosition> {
+        let mut vec: Vec<GridPosition> = self.body.iter().copied().collect();
+        vec.push(self.head);
+        vec
     }
 
     /// Helper function that checks if the `Snake`

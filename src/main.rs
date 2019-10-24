@@ -1,9 +1,14 @@
 use ggez::{
     self,
     conf::{WindowMode, WindowSetup},
-    event::{self, EventHandler},
-    graphics::{self, Color, DrawMode, Mesh, Rect},
-    input, Context, ContextBuilder, GameResult,
+    event::{self, EventHandler, KeyCode},
+    graphics::{
+        self, Color, DrawMode, Font, Mesh, Rect, Scale, Text, TextFragment, DEFAULT_FONT_SCALE,
+    },
+    input,
+    timer,
+    mint::Point2,
+    Context, ContextBuilder, GameResult,
 };
 use std::time::{Duration, Instant};
 
@@ -52,6 +57,20 @@ impl Game {
             last_update: Instant::now(),
         })
     }
+
+    /// Helper function that generates a new random
+    /// position for the food while ensuring that it
+    /// doesn't collide with the snake.
+    ///
+    /// note: this algorithm ***isn't*** good.
+    fn generate_food_position(&self) -> GridPosition {
+        let segments = self.snake.segments();
+        let mut position = GridPosition::random(GRID_SIZE.0, GRID_SIZE.1);
+        while segments.contains(&position) {
+            position = GridPosition::random(GRID_SIZE.0, GRID_SIZE.1);
+        }
+        position
+    }
 }
 
 impl EventHandler for Game {
@@ -68,9 +87,7 @@ impl EventHandler for Game {
                     // if the snake ate the food, we need to change its position
                     // note: we need to add a way grill a random position *without*
                     // a snake segment.
-                    Ate::Food => self
-                        .food
-                        .set_position(GridPosition::random(GRID_SIZE.0, GRID_SIZE.1)),
+                    Ate::Food => self.food.set_position(self.generate_food_position()),
                 }
             }
             // update the last update time
@@ -83,7 +100,24 @@ impl EventHandler for Game {
         graphics::clear(ctx, Color::from_rgb(40, 50, 130));
         self.snake.draw(ctx)?;
         self.food.draw(ctx)?;
+
+        if self.game_over {
+            let fragment = TextFragment::new("Game Over! \nPress ENTER to play again")
+                .scale(Scale::uniform(DEFAULT_FONT_SCALE * 2.0));
+            let text = &mut Text::new(fragment);
+            let dimensions = text.dimensions(ctx);
+            graphics::draw(
+                ctx,
+                text,
+                (Point2 {
+                    x: SCREEN_SIZE.0 as f32 * 0.5 - dimensions.0 as f32 * 0.5,
+                    y: SCREEN_SIZE.1 as f32 * 0.5 - dimensions.1 as f32,
+                },),
+            )?;
+        }
+
         graphics::present(ctx)?;
+        timer::yield_now();
         Ok(())
     }
 
@@ -94,14 +128,22 @@ impl EventHandler for Game {
         _keymods: input::keyboard::KeyMods,
         _repeat: bool,
     ) {
-        if keycode == event::KeyCode::Escape {
+        if keycode == KeyCode::Escape {
             event::quit(ctx);
         }
         // update the direction
-        if let Some(direction) = Direction::from_keycode(keycode) {
+        else if let Some(direction) = Direction::from_keycode(keycode) {
             // this method may fail if the direction is not orthogonal,
             // but we don't especially care ;)
             let _ = self.snake.set_direction(direction);
+        }
+        // restart the game
+        else if keycode == KeyCode::Return {
+            let game = Game::new(ctx).expect("Failed to restart the game");
+            self.snake = game.snake;
+            self.food = game.food;
+            self.game_over = game.game_over;
+            self.last_update = game.last_update;
         }
     }
 }
