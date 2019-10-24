@@ -3,7 +3,7 @@ use ggez::{
     conf::{WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode},
     graphics::{
-        self, Color, DrawMode, Font, Mesh, Rect, Scale, Text, TextFragment, DEFAULT_FONT_SCALE,
+        self, Color, DrawMode, Mesh, Rect, Scale, Text, TextFragment, DEFAULT_FONT_SCALE,
     },
     input,
     timer,
