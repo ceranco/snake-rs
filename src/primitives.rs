@@ -1,5 +1,7 @@
-use ggez::event::KeyCode;
-use ggez::mint::Point2;
+use ggez::{
+    event::{Axis, Button, KeyCode},
+    mint::Point2,
+};
 use rand::{self, Rng};
 
 /// The size of out game board in terms of how many grid
@@ -76,6 +78,51 @@ impl Direction {
             KeyCode::Down => Some(Direction::Down),
             KeyCode::Left => Some(Direction::Left),
             KeyCode::Right => Some(Direction::Right),
+            _ => None,
+        }
+    }
+
+    /// Converts between a `ggez` `Button` and the `Direction` it represents.
+    ///
+    /// Not every `Button` represents a `Direction`, so `None` is returned
+    /// if this is the case.
+    pub fn from_button(button: Button) -> Option<Self> {
+        match button {
+            Button::DPadUp => Some(Direction::Up),
+            Button::DPadDown => Some(Direction::Down),
+            Button::DPadLeft => Some(Direction::Left),
+            Button::DPadRight => Some(Direction::Right),
+            _ => None,
+        }
+    }
+
+    /// Converts between a `ggez` `Axis` and value (`f32`) to the direction they represent.
+    /// 
+    /// Not every `Axis` represents a `Direction` in our case,   
+    /// so `None` is returned if the is the case.
+    /// 
+    /// Note that we also have a deadzone in our axis to prevent over-sensitive behavior.
+    pub fn from_axis(axis: Axis, value: f32) -> Option<Self> {
+        const CUTOFF: f32 = 0.4;
+        match axis {
+            Axis::RightStickX => {
+                if value > CUTOFF {
+                    Some(Direction::Right)
+                } else if value < -CUTOFF {
+                    Some(Direction::Left)
+                } else {
+                    None
+                }
+            }
+            Axis::RightStickY => {
+                if value > CUTOFF {
+                    Some(Direction::Up)
+                } else if value < -CUTOFF {
+                    Some(Direction::Down)
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }
