@@ -1,6 +1,6 @@
 use ggez::{
-    event::{KeyCode, Button},
-    mint::Point2
+    event::{Axis, Button, KeyCode},
+    mint::Point2,
 };
 use rand::{self, Rng};
 
@@ -83,7 +83,7 @@ impl Direction {
     }
 
     /// Converts between a `ggez` `Button` and the `Direction` it represents.
-    /// 
+    ///
     /// Not every `Button` represents a `Direction`, so `None` is returned
     /// if this is the case.
     pub fn from_button(button: Button) -> Option<Self> {
@@ -92,6 +92,37 @@ impl Direction {
             Button::DPadDown => Some(Direction::Down),
             Button::DPadLeft => Some(Direction::Left),
             Button::DPadRight => Some(Direction::Right),
+            _ => None,
+        }
+    }
+
+    /// Converts between a `ggez` `Axis` and value (`f32`) to the direction they represent.
+    /// 
+    /// Not every `Axis` represents a `Direction` in our case,   
+    /// so `None` is returned if the is the case.
+    /// 
+    /// Note that we also have a deadzone in our axis to prevent over-sensitive behavior.
+    pub fn from_axis(axis: Axis, value: f32) -> Option<Self> {
+        const CUTOFF: f32 = 0.4;
+        match axis {
+            Axis::RightStickX => {
+                if value > CUTOFF {
+                    Some(Direction::Right)
+                } else if value < -CUTOFF {
+                    Some(Direction::Left)
+                } else {
+                    None
+                }
+            }
+            Axis::RightStickY => {
+                if value > CUTOFF {
+                    Some(Direction::Up)
+                } else if value < -CUTOFF {
+                    Some(Direction::Down)
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }

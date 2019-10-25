@@ -152,6 +152,15 @@ impl EventHandler for Game {
             let _ = self.snake.set_direction(direction);
         }
     }
+
+    fn gamepad_axis_event(&mut self, _ctx: &mut Context, axis: Axis, value: f32, _id: GamepadId) {
+        if let Some(direction) = Direction::from_axis(axis, value) {
+            // this method may fail if the direction is not orthogonal,
+            // but we don't especially care ;)
+            let _ = self.snake.set_direction(direction);
+        }
+        println!("Axis: {:?}, Value: {}", axis, value);
+    }
 }
 
 fn main() {
