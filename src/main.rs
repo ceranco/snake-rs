@@ -68,6 +68,19 @@ impl Game {
         }
         position
     }
+
+    /// Helper function that restarts reinitializes
+    /// the `Game` to its starting state.
+    /// 
+    /// note: there is a probably a better and more
+    /// efficient way to do this.
+    fn restart(&mut self, ctx: &mut Context) {
+        let game = Game::new(ctx).expect("Failed to restart the game");
+        self.snake = game.snake;
+        self.food = game.food;
+        self.game_over = game.game_over;
+        self.last_update = game.last_update;
+    }
 }
 
 impl EventHandler for Game {
@@ -99,7 +112,7 @@ impl EventHandler for Game {
         self.food.draw(ctx)?;
 
         if self.game_over {
-            let fragment = TextFragment::new("Game Over! \nPress ENTER to play again")
+            let fragment = TextFragment::new("Game Over! \nPress ENTER or START to play again")
                 .scale(Scale::uniform(DEFAULT_FONT_SCALE * 2.0));
             let text = &mut Text::new(fragment);
             let dimensions = text.dimensions(ctx);
@@ -125,6 +138,7 @@ impl EventHandler for Game {
         _keymods: input::keyboard::KeyMods,
         _repeat: bool,
     ) {
+        // quit the game
         if keycode == KeyCode::Escape {
             event::quit(ctx);
         }
@@ -135,21 +149,25 @@ impl EventHandler for Game {
             let _ = self.snake.set_direction(direction);
         }
         // restart the game
-        else if keycode == KeyCode::Return {
-            let game = Game::new(ctx).expect("Failed to restart the game");
-            self.snake = game.snake;
-            self.food = game.food;
-            self.game_over = game.game_over;
-            self.last_update = game.last_update;
+        else if self.game_over && keycode == KeyCode::Return {
+            self.restart(ctx);
         }
     }
 
-    fn gamepad_button_down_event(&mut self, _ctx: &mut Context, btn: Button, _id: GamepadId) {
+    fn gamepad_button_down_event(&mut self, ctx: &mut Context, btn: Button, _id: GamepadId) {
+        // quit the game
+        if btn == Button::Select {
+            event::quit(ctx);
+        }
         // update the direction
         if let Some(direction) = Direction::from_button(btn) {
             // this method may fail if the direction is not orthogonal,
             // but we don't especially care ;)
             let _ = self.snake.set_direction(direction);
+        }
+        // restart the game
+        else if self.game_over && btn == Button::Start {
+            self.restart(ctx);
         }
     }
 
@@ -159,7 +177,6 @@ impl EventHandler for Game {
             // but we don't especially care ;)
             let _ = self.snake.set_direction(direction);
         }
-        println!("Axis: {:?}, Value: {}", axis, value);
     }
 }
 
