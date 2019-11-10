@@ -1,5 +1,6 @@
 use ggez::{
     event::{Axis, Button, KeyCode},
+    graphics::{DrawParam, Rect},
     mint::Point2,
 };
 use rand::{self, Rng};
@@ -194,5 +195,69 @@ impl From<GridPosition> for Point2<f32> {
             x: (pos.x * GRID_CELL_SIZE.0) as f32,
             y: (pos.y * GRID_CELL_SIZE.1) as f32,
         }
+    }
+}
+
+/// The various sprites available in the spritesheet.
+/// 
+/// Use in conjuction with `Game::get_param` to easily get 
+/// the correct `DrawParam` that draws the asked for sprite.
+pub enum Sprite {
+    /// The head sprites.
+    /// 
+    /// `Direction` is the direction in which the head is pointing.
+    Head(Direction),
+    /// The segment sprites. This include both the straight and curved
+    /// body segments.
+    /// 
+    /// The first and second `Direction`s segment starts and ends, respectivly.
+    /// 
+    /// If the same `Direction` is passed twice, `Game::get_param` panics.
+    Segment(Direction, Direction),
+    /// The tail sprites.
+    /// 
+    /// `Direction` is the direction in which the rest of the body
+    /// is pointing, meaning **opposite** of the tail's point.
+    Tail(Direction),
+    Rabit,
+    Grass,
+}
+
+impl Sprite {
+    /// Helper function that gets a `DrawParam`
+    /// with the correct `src` and `rotation` for
+    /// the asked for `Sprite`
+    pub fn get_param(&self) -> DrawParam {
+        let src: Rect = match self {
+            Sprite::Head(direction) => match direction {
+                Direction::Right => Rect::new(0.25, 0.0, 0.25, 0.25),
+                Direction::Up => Rect::new(0.0, 0.0, 0.25, 0.25),
+                Direction::Left => Rect::new(0.75, 0.0, 0.25, 0.25),
+                Direction::Down => Rect::new(0.5, 0.0, 0.25, 0.25),
+            },
+            Sprite::Segment(src, tgt) => match (src, tgt) {
+                (Direction::Left, Direction::Right) | (Direction::Right, Direction::Left) => {
+                    Rect::new(0.25, 0.75, 0.25, 0.25)
+                }
+                (Direction::Up, Direction::Down) | (Direction::Down, Direction::Up) => {
+                    Rect::new(0.0, 0.75, 0.25, 0.25)
+                }
+                (Direction::Up, Direction::Right) => Rect::new(0.0, 0.5, 0.25, 0.25),
+                (Direction::Down, Direction::Right) => Rect::new(0.25, 0.5, 0.25, 0.25),
+                (Direction::Left, Direction::Down) => Rect::new(0.5, 0.5, 0.25, 0.25),
+                (Direction::Left, Direction::Up) => Rect::new(0.75, 0.5, 0.25, 0.25),
+                _ => panic!(),
+            },
+            Sprite::Tail(direction) => match direction {
+                Direction::Up => Rect::new(0.0, 0.25, 0.25, 0.25),
+                Direction::Right => Rect::new(0.25, 0.25, 0.25, 0.25),
+                Direction::Down => Rect::new(0.5, 0.25, 0.25, 0.25),
+                Direction::Left => Rect::new(0.75, 0.25, 0.25, 0.25),
+            },
+            Sprite::Rabit => Rect::new(0.5, 0.75, 0.25, 0.25),
+            Sprite::Grass => Rect::new(0.75, 0.75, 0.25, 0.25),
+        };
+
+        DrawParam::default().src(src)
     }
 }

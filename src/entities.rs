@@ -1,6 +1,6 @@
 use crate::primitives::*;
 use ggez::{
-    graphics::{self, Mesh},
+    graphics::{self, Mesh, Image},
     mint::Point2,
     Context, GameResult,
 };
@@ -9,8 +9,6 @@ use std::collections::VecDeque;
 /// Contains all the information needed to describe
 /// the state of the snake itself.
 pub struct Snake {
-    head_mesh: Mesh,
-    body_mesh: Mesh,
     head: GridPosition,
     body: VecDeque<GridPosition>,
     direction: Direction,
@@ -21,12 +19,10 @@ pub struct Snake {
 impl Snake {
     /// Creates a new `Snake` with one head segment at the
     /// given position and one `Tail` segment behind it (direction is right).
-    pub fn new(head_mesh: Mesh, body_mesh: Mesh, position: GridPosition) -> Self {
+    pub fn new(position: GridPosition) -> Self {
         let mut body = VecDeque::new();
         body.push_back(GridPosition::new_from_move(position, Direction::Left));
         Self {
-            head_mesh: head_mesh,
-            body_mesh: body_mesh,
             head: position,
             body: body,
             direction: Direction::Right,
@@ -109,12 +105,12 @@ impl Snake {
     }
 
     /// Draws the `Snake` to the screen in its current state.
-    pub fn draw(&mut self, ctx: &mut Context) -> GameResult {
+    pub fn draw(&mut self, ctx: &mut Context, sprites: &mut Image) -> GameResult {
         let mut point: Point2<f32> = self.head.into();
-        graphics::draw(ctx, &mut self.head_mesh, (point,))?;
+        graphics::draw(ctx, sprites, Sprite::Head(Direction::Right).get_param().dest(point))?;
         for segment in &self.body {
             point = (*segment).into();
-            graphics::draw(ctx, &mut self.body_mesh, (point,))?;
+            graphics::draw(ctx, sprites, Sprite::Tail(Direction::Right).get_param().dest(point))?;
         }
         Ok(())
     }
@@ -122,14 +118,12 @@ impl Snake {
 
 /// Represents a piece of food that the `Snake` can eat.
 pub struct Food {
-    mesh: Mesh,
     position: GridPosition,
 }
 
 impl Food {
-    pub fn new(mesh: Mesh, position: GridPosition) -> Self {
+    pub fn new(position: GridPosition) -> Self {
         Self {
-            mesh: mesh,
             position: position,
         }
     }
@@ -142,9 +136,9 @@ impl Food {
         self.position = position;
     }
 
-    pub fn draw(&mut self, ctx: &mut Context) -> GameResult {
+    pub fn draw(&mut self, ctx: &mut Context, sprites: &mut Image) -> GameResult {
         let point: Point2<f32> = self.position.into();
-        graphics::draw(ctx, &mut self.mesh, (point,))?;
+        graphics::draw(ctx, sprites, Sprite::Rabit.get_param().dest(point))?;
         Ok(())
     }
 }

@@ -2,11 +2,16 @@ use ggez::{
     self,
     conf::{WindowMode, WindowSetup},
     event::{self, Axis, Button, EventHandler, KeyCode},
-    graphics::{self, Color, DrawMode, Mesh, Rect, Scale, Text, TextFragment, DEFAULT_FONT_SCALE},
+    graphics::{
+        self, Color, DrawMode, DrawParam, Image, Mesh, Rect, Scale, Text, TextFragment,
+        DEFAULT_FONT_SCALE,
+    },
     input::{self, gamepad::GamepadId},
     mint::Point2,
     timer, Context, ContextBuilder, GameResult,
 };
+use std::env;
+use std::path;
 use std::time::{Duration, Instant};
 
 mod primitives;
@@ -23,35 +28,19 @@ struct Game {
     snake: Snake,
     food: Food,
     last_update: Instant,
+    sprites: Image,
 }
 
 impl Game {
     /// Helper function to create a new `Game`.
     fn new(ctx: &mut Context) -> GameResult<Self> {
-        let snake_head_mesh = Mesh::new_rectangle(
-            ctx,
-            DrawMode::fill(),
-            Rect::new(0.0, 0.0, GRID_CELL_SIZE.0 as f32, GRID_CELL_SIZE.1 as f32),
-            graphics::WHITE,
-        )?;
-        let snake_body_mesh = Mesh::new_rectangle(
-            ctx,
-            DrawMode::fill(),
-            Rect::new(0.0, 0.0, GRID_CELL_SIZE.0 as f32, GRID_CELL_SIZE.1 as f32),
-            graphics::WHITE,
-        )?;
-        let food_mesh = Mesh::new_rectangle(
-            ctx,
-            DrawMode::fill(),
-            Rect::new(0.0, 0.0, GRID_CELL_SIZE.0 as f32, GRID_CELL_SIZE.1 as f32),
-            graphics::Color::from_rgb(200, 100, 0),
-        )?;
-
+        let sprites = Image::new(ctx, "/sprites.png")?;
         Ok(Self {
-            snake: Snake::new(snake_body_mesh, snake_head_mesh, (1, 0).into()),
-            food: Food::new(food_mesh, (GRID_SIZE.0 / 2, GRID_SIZE.1 / 2).into()),
+            snake: Snake::new((1, 0).into()),
+            food: Food::new((GRID_SIZE.0 / 2, GRID_SIZE.1 / 2).into()),
             game_over: false,
             last_update: Instant::now(),
+            sprites: sprites,
         })
     }
 
@@ -71,7 +60,7 @@ impl Game {
 
     /// Helper function that restarts reinitializes
     /// the `Game` to its starting state.
-    /// 
+    ///
     /// note: there is a probably a better and more
     /// efficient way to do this.
     fn restart(&mut self, ctx: &mut Context) {
@@ -108,8 +97,8 @@ impl EventHandler for Game {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         graphics::clear(ctx, Color::from_rgb(40, 50, 130));
-        self.snake.draw(ctx)?;
-        self.food.draw(ctx)?;
+        self.snake.draw(ctx, &mut self.sprites)?;
+        self.food.draw(ctx, &mut self.sprites)?;
 
         if self.game_over {
             let fragment = TextFragment::new("Game Over! \nPress ENTER or START to play again")
@@ -181,10 +170,21 @@ impl EventHandler for Game {
 }
 
 fn main() {
+    // We add the CARGO_MANIFEST_DIR/resources to the resource paths
+    // so that ggez will look in our cargo project directory for files.
+    let resource_dir = if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+        let mut path = path::PathBuf::from(manifest_dir);
+        path.push("resources");
+        path
+    } else {
+        path::PathBuf::from("./resources")
+    };
+
     // create the new context and window with the correct dimensions and title
     let (mut ctx, mut events_loop) = ContextBuilder::new("Snake", "Eran Cohen")
         .window_setup(WindowSetup::default().title("Snake"))
         .window_mode(WindowMode::default().dimensions(SCREEN_SIZE.0, SCREEN_SIZE.1))
+        .add_resource_path(resource_dir)
         .build()
         .unwrap();
     // create a new game
