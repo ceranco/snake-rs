@@ -149,7 +149,7 @@ pub struct GridPosition {
 
 impl GridPosition {
     pub fn new(x: i16, y: i16) -> Self {
-        Self { x: x, y: y }
+        Self { x, y }
     }
 
     /// Creates a random `GridPosition` from `(0, 0)` to `(max_x, max_y)`.

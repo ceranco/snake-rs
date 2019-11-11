@@ -40,7 +40,7 @@ impl Game {
             food: Food::new((GRID_SIZE.0 / 2, GRID_SIZE.1 / 2).into()),
             game_over: false,
             last_update: Instant::now(),
-            sprites: sprites,
+            sprites,
         })
     }
 

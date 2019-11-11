@@ -24,7 +24,7 @@ impl Snake {
         body.push_back(GridPosition::new_from_move(position, Direction::Left));
         Self {
             head: position,
-            body: body,
+            body,
             direction: Direction::Right,
             previous_direction: Direction::Right,
             next_direction: None,
@@ -124,7 +124,7 @@ pub struct Food {
 impl Food {
     pub fn new(position: GridPosition) -> Self {
         Self {
-            position: position,
+            position,
         }
     }
 
