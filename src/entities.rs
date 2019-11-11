@@ -149,13 +149,18 @@ impl Snake {
 
     /// Draws the `Snake` to the screen in its current state.
     pub fn draw(&mut self, ctx: &mut Context, sprites: &mut Image) -> GameResult {
-        let mut param: DrawParam = (&self.head).into();
+        // draw the tail
+        let mut param: DrawParam = (&self.tail).into();
         graphics::draw(ctx, sprites, param)?;
+
+        // draw the body
         for segment in &self.body {
             param = segment.into();
             graphics::draw(ctx, sprites, param)?;
         }
-        param = (&self.tail).into();
+        
+        // draw the head last to show it ontop anything else
+        param = (&self.head).into();
         graphics::draw(ctx, sprites, param)?;
         Ok(())
     }
