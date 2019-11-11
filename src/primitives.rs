@@ -47,7 +47,7 @@ pub type SnakeResult<T = ()> = Result<T, SnakeError>;
 
 /// Represents all the possible directions
 /// that our snake can move.
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Direction {
     Left,
     Right,
@@ -242,11 +242,11 @@ impl Sprite {
                 (Direction::Up, Direction::Down) | (Direction::Down, Direction::Up) => {
                     Rect::new(0.0, 0.75, 0.25, 0.25)
                 }
-                (Direction::Up, Direction::Right) => Rect::new(0.0, 0.5, 0.25, 0.25),
-                (Direction::Down, Direction::Right) => Rect::new(0.25, 0.5, 0.25, 0.25),
-                (Direction::Left, Direction::Down) => Rect::new(0.5, 0.5, 0.25, 0.25),
-                (Direction::Left, Direction::Up) => Rect::new(0.75, 0.5, 0.25, 0.25),
-                _ => panic!(),
+                (Direction::Up, Direction::Right) | (Direction::Right, Direction::Up) => Rect::new(0.0, 0.5, 0.25, 0.25),
+                (Direction::Down, Direction::Right) | (Direction::Right, Direction::Down) => Rect::new(0.25, 0.5, 0.25, 0.25),
+                (Direction::Left, Direction::Down) | (Direction::Down, Direction::Left) => Rect::new(0.5, 0.5, 0.25, 0.25),
+                (Direction::Left, Direction::Up) | (Direction::Up, Direction::Left) => Rect::new(0.75, 0.5, 0.25, 0.25),
+                _ => panic!("Segment with same directions: {:?}", src),
             },
             Sprite::Tail(direction) => match direction {
                 Direction::Up => Rect::new(0.0, 0.25, 0.25, 0.25),

@@ -1,16 +1,37 @@
 use crate::primitives::*;
 use ggez::{
-    graphics::{self, Image},
+    graphics::{self, DrawParam, Image},
     mint::Point2,
     Context, GameResult,
 };
 use std::collections::VecDeque;
 
+/// Contains the information needed to
+/// describe a single segment of the snake.
+struct Segment {
+    position: GridPosition,
+    sprite: Sprite,
+}
+
+impl Segment {
+    fn new(position: GridPosition, sprite: Sprite) -> Self {
+        Self { position, sprite }
+    }
+}
+
+impl From<&Segment> for DrawParam {
+    fn from(segment: &Segment) -> Self {
+        let point: Point2<f32> = segment.position.into();
+        segment.sprite.get_param().dest(point)
+    }
+}
+
 /// Contains all the information needed to describe
 /// the state of the snake itself.
 pub struct Snake {
-    head: GridPosition,
-    body: VecDeque<GridPosition>,
+    head: Segment,
+    body: VecDeque<Segment>,
+    tail: Segment,
     direction: Direction,
     previous_direction: Direction,
     next_direction: Option<Direction>,
@@ -20,11 +41,16 @@ impl Snake {
     /// Creates a new `Snake` with one head segment at the
     /// given position and one `Tail` segment behind it (direction is right).
     pub fn new(position: GridPosition) -> Self {
-        let mut body = VecDeque::new();
-        body.push_back(GridPosition::new_from_move(position, Direction::Left));
+        let head = Segment::new(position, Sprite::Head(Direction::Right));
+        let body = VecDeque::new();
+        let tail = Segment::new(
+            GridPosition::new_from_move(position, Direction::Left),
+            Sprite::Tail(Direction::Right),
+        );
         Self {
-            head: position,
+            head,
             body,
+            tail,
             direction: Direction::Right,
             previous_direction: Direction::Right,
             next_direction: None,
@@ -56,27 +82,41 @@ impl Snake {
     /// This is useful to generate a new position for the
     /// food and check that the snake isn't already there.
     pub fn segments(&self) -> Vec<GridPosition> {
-        let mut vec: Vec<GridPosition> = self.body.iter().copied().collect();
-        vec.push(self.head);
+        let mut vec: Vec<GridPosition> = self.body.iter().map(|segment| segment.position).collect();
+        vec.push(self.head.position);
         vec
     }
 
     /// Helper function that checks if the `Snake`
     /// is eating the `Food` in its current state.
     fn eats_food(&self, food: &Food) -> bool {
-        self.head == food.position()
+        self.head.position == food.position()
     }
 
     /// Helper function that checks if the `Snake`
     /// is eating itself in its current state.
     fn eats_self(&self) -> bool {
-        self.body.contains(&self.head)
+        self.body
+            .iter()
+            .any(|segment| segment.position == self.head.position)
     }
 
     /// Updates the state of the `Snake`.
     pub fn update(&mut self, food: &Food) -> Option<Ate> {
         // move in the set direction
-        let new_head = GridPosition::new_from_move(self.head, self.direction);
+        let new_head = Segment::new(
+            GridPosition::new_from_move(self.head.position, self.direction),
+            Sprite::Head(self.direction),
+        );
+
+        // push the current head-position to the body
+        // as a segment from `previous_direction` -> `direction`
+        // and update it to the new one
+        self.body.push_front(Segment::new(
+            self.head.position,
+            Sprite::Segment(self.previous_direction.inverse(), self.direction),
+        ));
+        self.head = new_head;
 
         // update the "direction cache"
         self.previous_direction = self.direction;
@@ -85,17 +125,20 @@ impl Snake {
             self.next_direction = None;
         }
 
-        // push the current head to the body and update its position
-        self.body.push_front(self.head);
-        self.head = new_head;
-
         // check if the snake is eating something
         if self.eats_food(food) {
             Some(Ate::Food)
         } else {
-            // if the snake didn't eat food, pop the last body segment
-            // to create the illusion of movement
-            self.body.pop_back();
+            // if the snake didn't eat food, move the last body segment
+            // to the tail to create the illusion of movement
+            let mut new_tail = self.body.pop_back().expect("The body was empty?!");
+            let tail_direction = match new_tail.sprite {
+                Sprite::Segment(_, tgt) => tgt,
+                _ => panic!("The body sprite wasn't `Sprite::Segment`."),
+            };
+            new_tail.sprite = Sprite::Tail(tail_direction);
+            self.tail = new_tail;
+
             if self.eats_self() {
                 Some(Ate::Itself)
             } else {
@@ -106,12 +149,14 @@ impl Snake {
 
     /// Draws the `Snake` to the screen in its current state.
     pub fn draw(&mut self, ctx: &mut Context, sprites: &mut Image) -> GameResult {
-        let mut point: Point2<f32> = self.head.into();
-        graphics::draw(ctx, sprites, Sprite::Head(Direction::Right).get_param().dest(point))?;
+        let mut param: DrawParam = (&self.head).into();
+        graphics::draw(ctx, sprites, param)?;
         for segment in &self.body {
-            point = (*segment).into();
-            graphics::draw(ctx, sprites, Sprite::Tail(Direction::Right).get_param().dest(point))?;
+            param = segment.into();
+            graphics::draw(ctx, sprites, param)?;
         }
+        param = (&self.tail).into();
+        graphics::draw(ctx, sprites, param)?;
         Ok(())
     }
 }
@@ -123,9 +168,7 @@ pub struct Food {
 
 impl Food {
     pub fn new(position: GridPosition) -> Self {
-        Self {
-            position,
-        }
+        Self { position }
     }
 
     pub fn position(&self) -> GridPosition {
