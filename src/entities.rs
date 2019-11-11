@@ -1,6 +1,6 @@
 use crate::primitives::*;
 use ggez::{
-    graphics::{self, Mesh, Image},
+    graphics::{self, Image},
     mint::Point2,
     Context, GameResult,
 };

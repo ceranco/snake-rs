@@ -3,7 +3,7 @@ use ggez::{
     conf::{WindowMode, WindowSetup},
     event::{self, Axis, Button, EventHandler, KeyCode},
     graphics::{
-        self, Color, DrawMode, DrawParam, Image, Mesh, Rect, Scale, Text, TextFragment,
+        self, Color, Image, Scale, Text, TextFragment,
         DEFAULT_FONT_SCALE,
     },
     input::{self, gamepad::GamepadId},
