@@ -9,12 +9,20 @@ use rand::{self, Rng};
 /// cells it takes up.
 pub const GRID_SIZE: (i16, i16) = (30, 20);
 /// The pixel size of each tile.
-pub const GRID_CELL_SIZE: (i16, i16) = (32, 32);
+pub const GRID_CELL_SIZE: (i16, i16) = (16, 16);
 
 /// The size of the window.
 pub const SCREEN_SIZE: (f32, f32) = (
     GRID_SIZE.0 as f32 * GRID_CELL_SIZE.0 as f32,
     GRID_SIZE.1 as f32 * GRID_CELL_SIZE.1 as f32,
+);
+
+/// The size of a sprite.
+pub const SPRITE_SIZE: (i16, i16) = (16, 16);
+/// The ratio of the cell size to sprite size
+pub const SPRITE_CELL_RATIO: (f32, f32) = (
+    (GRID_CELL_SIZE.0 as f32) / (SPRITE_SIZE.0 as f32),
+    (GRID_CELL_SIZE.1 as f32) / (SPRITE_SIZE.1 as f32),
 );
 
 /// The number of updates we want to run each second.

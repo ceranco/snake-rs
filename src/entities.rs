@@ -22,7 +22,11 @@ impl Segment {
 impl From<&Segment> for DrawParam {
     fn from(segment: &Segment) -> Self {
         let point: Point2<f32> = segment.position.into();
-        segment.sprite.get_param().dest(point)
+        segment
+            .sprite
+            .get_param()
+            .scale([SPRITE_CELL_RATIO.0, SPRITE_CELL_RATIO.1])
+            .dest(point)
     }
 }
 
@@ -158,7 +162,7 @@ impl Snake {
             param = segment.into();
             graphics::draw(ctx, sprites, param)?;
         }
-        
+
         // draw the head last to show it ontop anything else
         param = (&self.head).into();
         graphics::draw(ctx, sprites, param)?;
@@ -168,25 +172,27 @@ impl Snake {
 
 /// Represents a piece of food that the `Snake` can eat.
 pub struct Food {
-    position: GridPosition,
+    segment: Segment,
 }
 
 impl Food {
     pub fn new(position: GridPosition) -> Self {
-        Self { position }
+        Self {
+            segment: Segment::new(position, Sprite::Rabit),
+        }
     }
 
     pub fn position(&self) -> GridPosition {
-        self.position
+        self.segment.position
     }
 
     pub fn set_position(&mut self, position: GridPosition) {
-        self.position = position;
+        self.segment.position = position;
     }
 
     pub fn draw(&mut self, ctx: &mut Context, sprites: &mut Image) -> GameResult {
-        let point: Point2<f32> = self.position.into();
-        graphics::draw(ctx, sprites, Sprite::Rabit.get_param().dest(point))?;
+        let param: DrawParam = (&self.segment).into();
+        graphics::draw(ctx, sprites, param)?;
         Ok(())
     }
 }
