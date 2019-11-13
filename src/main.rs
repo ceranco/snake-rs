@@ -3,7 +3,7 @@ use ggez::{
     conf::{WindowMode, WindowSetup},
     event::{self, Axis, Button, EventHandler, KeyCode},
     graphics::{
-        self, Color, Image, Scale, Text, TextFragment,
+        self, spritebatch::SpriteBatch, Color, DrawParam, Image, Scale, Text, TextFragment,
         DEFAULT_FONT_SCALE,
     },
     input::{self, gamepad::GamepadId},
@@ -29,18 +29,35 @@ struct Game {
     food: Food,
     last_update: Instant,
     sprites: Image,
+    background: SpriteBatch,
 }
 
 impl Game {
     /// Helper function to create a new `Game`.
     fn new(ctx: &mut Context) -> GameResult<Self> {
+        // load the spritesheet
         let sprites = Image::new(ctx, "/sprites.png")?;
+        
+        // generate the background spritebatch
+        let mut background = SpriteBatch::new(sprites.clone());
+        for x in 0..GRID_SIZE.0 {
+            for y in 0..GRID_SIZE.1 {
+                let point = GridPosition::new(x, y);
+                let param = Sprite::Grass
+                    .get_param()
+                    .scale([SPRITE_CELL_RATIO.0, SPRITE_CELL_RATIO.1])
+                    .dest(point);
+                background.add(param);
+            }
+        }
+
         Ok(Self {
             snake: Snake::new((1, 0).into()),
             food: Food::new((GRID_SIZE.0 / 2, GRID_SIZE.1 / 2).into()),
             game_over: false,
             last_update: Instant::now(),
             sprites,
+            background,
         })
     }
 
@@ -97,9 +114,15 @@ impl EventHandler for Game {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         graphics::clear(ctx, Color::from_rgb(40, 50, 130));
+
+        // draw the game in the following order: background -> snake -> food
+        graphics::draw(ctx, &mut self.background, DrawParam::default())?;
         self.snake.draw(ctx, &mut self.sprites)?;
         self.food.draw(ctx, &mut self.sprites)?;
 
+        // show the game-over screen
+        // TODO: I'm pretty sure that creating a new `TextFragment` each time is 
+        // a horrible horrible thing to do....
         if self.game_over {
             let fragment = TextFragment::new("Game Over! \nPress ENTER or START to play again")
                 .scale(Scale::uniform(DEFAULT_FONT_SCALE * 2.0));
