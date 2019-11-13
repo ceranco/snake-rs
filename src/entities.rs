@@ -22,11 +22,7 @@ impl Segment {
 impl From<&Segment> for DrawParam {
     fn from(segment: &Segment) -> Self {
         let point: Point2<f32> = segment.position.into();
-        segment
-            .sprite
-            .get_param()
-            .scale([SPRITE_CELL_RATIO.0, SPRITE_CELL_RATIO.1])
-            .dest(point)
+        DrawParam::from(&segment.sprite).dest(point)
     }
 }
 

@@ -106,10 +106,10 @@ impl Direction {
     }
 
     /// Converts between a `ggez` `Axis` and value (`f32`) to the direction they represent.
-    /// 
+    ///
     /// Not every `Axis` represents a `Direction` in our case,   
     /// so `None` is returned if the is the case.
-    /// 
+    ///
     /// Note that we also have a deadzone in our axis to prevent over-sensitive behavior.
     pub fn from_axis(axis: Axis, value: f32) -> Option<Self> {
         const CUTOFF: f32 = 0.4;
@@ -207,23 +207,23 @@ impl From<GridPosition> for Point2<f32> {
 }
 
 /// The various sprites available in the spritesheet.
-/// 
-/// Use in conjuction with `Game::get_param` to easily get 
+///
+/// Use in conjuction with `Game::get_param` to easily get
 /// the correct `DrawParam` that draws the asked for sprite.
 pub enum Sprite {
     /// The head sprites.
-    /// 
+    ///
     /// `Direction` is the direction in which the head is pointing.
     Head(Direction),
     /// The segment sprites. This include both the straight and curved
     /// body segments.
-    /// 
+    ///
     /// The first and second `Direction`s segment starts and ends, respectivly.
-    /// 
+    ///
     /// If the same `Direction` is passed twice, `Game::get_param` panics.
     Segment(Direction, Direction),
     /// The tail sprites.
-    /// 
+    ///
     /// `Direction` is the direction in which the rest of the body
     /// is pointing, meaning **opposite** of the tail's point.
     Tail(Direction),
@@ -231,12 +231,13 @@ pub enum Sprite {
     Grass,
 }
 
-impl Sprite {
-    /// Helper function that gets a `DrawParam`
-    /// with the correct `src` and `rotation` for
-    /// the asked for `Sprite`
-    pub fn get_param(&self) -> DrawParam {
-        let src: Rect = match self {
+impl From<&Sprite> for DrawParam {
+    /// Creates a `DrawParam` with the correct `src` and `rotation` for
+    /// the asked for `Sprite`.
+    ///
+    /// Will panic if the directions in the `Sprite::Segment` are not possible.
+    fn from(sprite: &Sprite) -> DrawParam {
+        let src: Rect = match sprite {
             Sprite::Head(direction) => match direction {
                 Direction::Right => Rect::new(0.25, 0.0, 0.25, 0.25),
                 Direction::Up => Rect::new(0.0, 0.0, 0.25, 0.25),
@@ -250,10 +251,18 @@ impl Sprite {
                 (Direction::Up, Direction::Down) | (Direction::Down, Direction::Up) => {
                     Rect::new(0.0, 0.75, 0.25, 0.25)
                 }
-                (Direction::Up, Direction::Right) | (Direction::Right, Direction::Up) => Rect::new(0.0, 0.5, 0.25, 0.25),
-                (Direction::Down, Direction::Right) | (Direction::Right, Direction::Down) => Rect::new(0.25, 0.5, 0.25, 0.25),
-                (Direction::Left, Direction::Down) | (Direction::Down, Direction::Left) => Rect::new(0.5, 0.5, 0.25, 0.25),
-                (Direction::Left, Direction::Up) | (Direction::Up, Direction::Left) => Rect::new(0.75, 0.5, 0.25, 0.25),
+                (Direction::Up, Direction::Right) | (Direction::Right, Direction::Up) => {
+                    Rect::new(0.0, 0.5, 0.25, 0.25)
+                }
+                (Direction::Down, Direction::Right) | (Direction::Right, Direction::Down) => {
+                    Rect::new(0.25, 0.5, 0.25, 0.25)
+                }
+                (Direction::Left, Direction::Down) | (Direction::Down, Direction::Left) => {
+                    Rect::new(0.5, 0.5, 0.25, 0.25)
+                }
+                (Direction::Left, Direction::Up) | (Direction::Up, Direction::Left) => {
+                    Rect::new(0.75, 0.5, 0.25, 0.25)
+                }
                 _ => panic!("Segment with same directions: {:?}", src),
             },
             Sprite::Tail(direction) => match direction {
@@ -266,6 +275,8 @@ impl Sprite {
             Sprite::Grass => Rect::new(0.75, 0.75, 0.25, 0.25),
         };
 
-        DrawParam::default().src(src)
+        DrawParam::default()
+            .src(src)
+            .scale([SPRITE_CELL_RATIO.0, SPRITE_CELL_RATIO.1])
     }
 }

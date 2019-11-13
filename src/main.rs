@@ -37,15 +37,13 @@ impl Game {
     fn new(ctx: &mut Context) -> GameResult<Self> {
         // load the spritesheet
         let sprites = Image::new(ctx, "/sprites.png")?;
-        
+
         // generate the background spritebatch
         let mut background = SpriteBatch::new(sprites.clone());
         for x in 0..GRID_SIZE.0 {
             for y in 0..GRID_SIZE.1 {
                 let point = GridPosition::new(x, y);
-                let param = Sprite::Grass
-                    .get_param()
-                    .scale([SPRITE_CELL_RATIO.0, SPRITE_CELL_RATIO.1])
+                let param = DrawParam::from(&Sprite::Grass)
                     .dest(point);
                 background.add(param);
             }
@@ -121,7 +119,7 @@ impl EventHandler for Game {
         self.food.draw(ctx, &mut self.sprites)?;
 
         // show the game-over screen
-        // TODO: I'm pretty sure that creating a new `TextFragment` each time is 
+        // TODO: I'm pretty sure that creating a new `TextFragment` each time is
         // a horrible horrible thing to do....
         if self.game_over {
             let fragment = TextFragment::new("Game Over! \nPress ENTER or START to play again")
