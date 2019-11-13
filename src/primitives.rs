@@ -280,3 +280,22 @@ impl From<&Sprite> for DrawParam {
             .scale([SPRITE_CELL_RATIO.0, SPRITE_CELL_RATIO.1])
     }
 }
+
+/// Contains all the information needed to
+/// describe and display a sprite.
+pub struct PositionedSprite {
+    pub sprite: Sprite,
+    pub position: GridPosition,
+}
+
+impl PositionedSprite {
+    pub fn new(sprite: Sprite, position: GridPosition) -> Self {
+        Self { sprite, position }
+    }
+}
+
+impl From<&PositionedSprite> for DrawParam {
+    fn from(ps: &PositionedSprite) -> Self {
+        DrawParam::from(&ps.sprite).dest(ps.position)
+    }
+}

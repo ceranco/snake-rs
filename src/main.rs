@@ -42,10 +42,10 @@ impl Game {
         let mut background = SpriteBatch::new(sprites.clone());
         for x in 0..GRID_SIZE.0 {
             for y in 0..GRID_SIZE.1 {
-                let point = GridPosition::new(x, y);
-                let param = DrawParam::from(&Sprite::Grass)
-                    .dest(point);
-                background.add(param);
+                background.add(&PositionedSprite::new(
+                    Sprite::Grass,
+                    GridPosition::new(x, y),
+                ));
             }
         }
 

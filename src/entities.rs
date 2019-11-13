@@ -1,37 +1,16 @@
 use crate::primitives::*;
 use ggez::{
     graphics::{self, DrawParam, Image},
-    mint::Point2,
     Context, GameResult,
 };
 use std::collections::VecDeque;
 
-/// Contains the information needed to
-/// describe a single segment of the snake.
-struct Segment {
-    position: GridPosition,
-    sprite: Sprite,
-}
-
-impl Segment {
-    fn new(position: GridPosition, sprite: Sprite) -> Self {
-        Self { position, sprite }
-    }
-}
-
-impl From<&Segment> for DrawParam {
-    fn from(segment: &Segment) -> Self {
-        let point: Point2<f32> = segment.position.into();
-        DrawParam::from(&segment.sprite).dest(point)
-    }
-}
-
 /// Contains all the information needed to describe
 /// the state of the snake itself.
 pub struct Snake {
-    head: Segment,
-    body: VecDeque<Segment>,
-    tail: Segment,
+    head: PositionedSprite,
+    body: VecDeque<PositionedSprite>,
+    tail: PositionedSprite,
     direction: Direction,
     previous_direction: Direction,
     next_direction: Option<Direction>,
@@ -41,11 +20,11 @@ impl Snake {
     /// Creates a new `Snake` with one head segment at the
     /// given position and one `Tail` segment behind it (direction is right).
     pub fn new(position: GridPosition) -> Self {
-        let head = Segment::new(position, Sprite::Head(Direction::Right));
+        let head = PositionedSprite::new(Sprite::Head(Direction::Right), position);
         let body = VecDeque::new();
-        let tail = Segment::new(
-            GridPosition::new_from_move(position, Direction::Left),
+        let tail = PositionedSprite::new(
             Sprite::Tail(Direction::Right),
+            GridPosition::new_from_move(position, Direction::Left),
         );
         Self {
             head,
@@ -104,17 +83,17 @@ impl Snake {
     /// Updates the state of the `Snake`.
     pub fn update(&mut self, food: &Food) -> Option<Ate> {
         // move in the set direction
-        let new_head = Segment::new(
-            GridPosition::new_from_move(self.head.position, self.direction),
+        let new_head = PositionedSprite::new(
             Sprite::Head(self.direction),
+            GridPosition::new_from_move(self.head.position, self.direction),
         );
 
         // push the current head-position to the body
         // as a segment from `previous_direction` -> `direction`
         // and update it to the new one
-        self.body.push_front(Segment::new(
-            self.head.position,
+        self.body.push_front(PositionedSprite::new(
             Sprite::Segment(self.previous_direction.inverse(), self.direction),
+            self.head.position,
         ));
         self.head = new_head;
 
@@ -168,13 +147,13 @@ impl Snake {
 
 /// Represents a piece of food that the `Snake` can eat.
 pub struct Food {
-    segment: Segment,
+    segment: PositionedSprite,
 }
 
 impl Food {
     pub fn new(position: GridPosition) -> Self {
         Self {
-            segment: Segment::new(position, Sprite::Rabit),
+            segment: PositionedSprite::new(Sprite::Rabit, position),
         }
     }
 
