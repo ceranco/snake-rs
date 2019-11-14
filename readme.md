@@ -26,7 +26,7 @@ To play the game, simply run:
 ```shell
 git clone https://github.com/ceranco/snake-rs.git
 cd snake-rs
-cargo run
+cargo run --release
 ```
 
 
