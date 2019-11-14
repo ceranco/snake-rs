@@ -9,6 +9,7 @@ use ggez::{
         DEFAULT_FONT_SCALE,
     },
     input::{self, gamepad::GamepadId},
+    audio::{Source, SoundSource},
     mint::Point2,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -31,6 +32,8 @@ struct Game {
     food: Food,
     last_update: Instant,
     sprites: Image,
+    eat_sound: Source,
+    die_sound: Source,
     background: SpriteBatch,
 }
 
@@ -39,6 +42,11 @@ impl Game {
     fn new(ctx: &mut Context) -> GameResult<Self> {
         // load the spritesheet
         let sprites = Image::new(ctx, "/sprites.png")?;
+
+        // load the audio
+        let eat_sound = Source::new(ctx, "/eat-sound.ogg")?;
+        let mut die_sound = Source::new(ctx, "/die-sound.ogg")?;
+        die_sound.set_volume(0.5);
 
         // generate the background spritebatch
         let mut background = SpriteBatch::new(sprites.clone());
@@ -57,6 +65,8 @@ impl Game {
             game_over: false,
             last_update: Instant::now(),
             sprites,
+            eat_sound,
+            die_sound,
             background,
         })
     }
@@ -99,11 +109,17 @@ impl EventHandler for Game {
             if let Some(ate) = self.snake.update(&self.food) {
                 match ate {
                     // game over if the snake ate itself
-                    Ate::Itself => self.game_over = true,
+                    Ate::Itself => {
+                        self.die_sound.play()?;
+                        self.game_over = true;
+                    },
                     // if the snake ate the food, we need to change its position
                     // note: we need to add a way grill a random position *without*
                     // a snake segment.
-                    Ate::Food => self.food.set_position(self.generate_food_position()),
+                    Ate::Food => {
+                        self.eat_sound.play()?;
+                        self.food.set_position(self.generate_food_position())
+                    },
                 }
             }
             // update the last update time
