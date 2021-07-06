@@ -127,19 +127,22 @@ impl Snake {
     }
 
     /// Draws the `Snake` to the screen in its current state.
-    pub fn draw(&mut self, ctx: &mut Context, sprites: &mut Image) -> GameResult {
+    /// 
+    /// `update_ratio` is the relative duration between the previous
+    /// update and the next update [0.0, 1.0].
+    pub fn draw(&mut self, ctx: &mut Context, update_ratio: f32, sprites: &mut Image) -> GameResult {
         // draw the tail
-        let mut param: DrawParam = (&self.tail).into();
+        let mut param = self.tail.to_draw_param(update_ratio);
         graphics::draw(ctx, sprites, param)?;
 
         // draw the body
         for segment in &self.body {
-            param = segment.into();
+            param = segment.to_draw_param(update_ratio);
             graphics::draw(ctx, sprites, param)?;
         }
 
         // draw the head last to show it ontop anything else
-        param = (&self.head).into();
+        param = self.head.to_draw_param(update_ratio);
         graphics::draw(ctx, sprites, param)?;
         Ok(())
     }

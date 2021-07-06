@@ -1,7 +1,8 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+//#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use ggez::{
     self,
+    audio::{SoundSource, Source},
     conf::{WindowMode, WindowSetup},
     event::{self, Axis, Button, EventHandler, KeyCode},
     graphics::{
@@ -9,13 +10,12 @@ use ggez::{
         DEFAULT_FONT_SCALE,
     },
     input::{self, gamepad::GamepadId},
-    audio::{Source, SoundSource},
     mint::Point2,
     timer, Context, ContextBuilder, GameResult,
 };
 use std::env;
 use std::path;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 
 mod primitives;
 use primitives::*;
@@ -35,6 +35,7 @@ struct Game {
     eat_sound: Source,
     die_sound: Source,
     background: SpriteBatch,
+    update_segment: f32,
 }
 
 impl Game {
@@ -68,6 +69,7 @@ impl Game {
             eat_sound,
             die_sound,
             background,
+            update_segment: 0.0,
         })
     }
 
@@ -101,29 +103,34 @@ impl Game {
 
 impl EventHandler for Game {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        // update the update segment, i.e. the amount of time that
+        // has passed from the previous update relative to the amount
+        // of time remaining until the next update.
+        self.update_segment =
+            (Instant::now() - self.last_update).as_millis() as f32 / MILLIS_PER_UPDATE as f32;
+        println!("update segment: {}", self.update_segment);
         // we want to update only if the game is not over and enough time
         // has passed since the last update
-        if !self.game_over
-            && Instant::now() - self.last_update >= Duration::from_millis(MILLIS_PER_UPDATE)
-        {
+        if !self.game_over && self.update_segment >= 1.0 {
             if let Some(ate) = self.snake.update(&self.food) {
                 match ate {
                     // game over if the snake ate itself
                     Ate::Itself => {
                         self.die_sound.play()?;
                         self.game_over = true;
-                    },
+                    }
                     // if the snake ate the food, we need to change its position
                     // note: we need to add a way grill a random position *without*
                     // a snake segment.
                     Ate::Food => {
                         self.eat_sound.play()?;
                         self.food.set_position(self.generate_food_position())
-                    },
+                    }
                 }
             }
             // update the last update time
             self.last_update = Instant::now();
+            self.update_segment = 0.0;
         }
         Ok(())
     }
@@ -133,7 +140,7 @@ impl EventHandler for Game {
 
         // draw the game in the following order: background -> snake -> food
         graphics::draw(ctx, &mut self.background, DrawParam::default())?;
-        self.snake.draw(ctx, &mut self.sprites)?;
+        self.snake.draw(ctx, self.update_segment, &mut self.sprites)?;
         self.food.draw(ctx, &mut self.sprites)?;
 
         // show the game-over screen

@@ -1,7 +1,8 @@
 use ggez::{
     event::{Axis, Button, KeyCode},
     graphics::{DrawParam, Rect},
-    mint::Point2,
+    mint::{Point2, Vector2},
+    nalgebra as na,
 };
 use rand::{self, Rng};
 
@@ -133,6 +134,17 @@ impl Direction {
                 }
             }
             _ => None,
+        }
+    }
+}
+
+impl From<Direction> for Vector2<f32> {
+    fn from(direction: Direction) -> Self {
+        match direction {
+            Direction::Left => [-1.0, 0.0].into(),
+            Direction::Up => [0.0, -1.0].into(),
+            Direction::Right => [1.0, 0.0].into(),
+            Direction::Down => [0.0, 1.0].into(),
         }
     }
 }
@@ -291,6 +303,32 @@ pub struct PositionedSprite {
 impl PositionedSprite {
     pub fn new(sprite: Sprite, position: GridPosition) -> Self {
         Self { sprite, position }
+    }
+
+    pub fn to_draw_param(&self, update_ratio: f32) -> DrawParam {
+        std::debug_assert!(0.0 <= update_ratio && update_ratio <= 1.0);
+
+        let direction: Option<Direction> = match self.sprite {
+            Sprite::Head(direction) => Some(direction),
+            Sprite::Segment(_, direction) => Some(direction),
+            Sprite::Tail(direction) => Some(direction),
+            _ => None,
+        };
+
+        let offset: na::Vector2<f32> = match direction {
+            Some(direction) =>  {
+                let vec: Vector2<f32> =  direction.into();
+                na::Vector2::new(
+                    vec.x * update_ratio * GRID_CELL_SIZE.0 as f32,
+                    vec.y * update_ratio * GRID_CELL_SIZE.1 as f32,
+                )
+            }
+            None => [0.0, 0.0].into(),
+        };
+
+        let param = DrawParam::from(self);
+        let dest: na::Point2<f32> = param.dest.into();
+        param.dest(dest + offset)
     }
 }
 
